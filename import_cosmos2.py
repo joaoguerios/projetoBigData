@@ -2,8 +2,9 @@ import pandas as pd
 from azure.cosmos import exceptions, CosmosClient, PartitionKey
 
 # Configuração do cliente Cosmos DB
-endpoint = "#"
-key = "#"
+
+endpoint = ""
+key = ""
 
 client = CosmosClient(endpoint, key)
 database_name = 'BD3'
@@ -61,22 +62,35 @@ df.drop_duplicates(subset=['id'], keep='last', inplace=True)
 unique_countries = df['country'].unique()
 unique_platforms = df['platform'].unique()
 
-# Inserção das entidades normalizadas em coleções separadas
+# Inserção das entidades normalizadas no container de países
 country_map = {}
 for country_id, country in enumerate(unique_countries, start=1):
     country_map[country] = str(country_id)
+    item = {
+        "id": str(country_id),           # campo id obrigatório
+        "country_id": str(country_id),   # chave de partição
+        "country_name": country
+    }
     try:
-        country_container.upsert_item({"country_id": str(country_id), "country_name": country})
+        country_container.upsert_item(item)
     except exceptions.CosmosHttpResponseError as e:
-        print(f'Erro ao inserir país {country}: {e.message}')
+        print(f'Erro ao inserir país {country} (ID: {country_id}): {e.message}')
 
+# Inserção das entidades normalizadas no container de plataformas
 platform_map = {}
 for platform_id, platform in enumerate(unique_platforms, start=1):
     platform_map[platform] = str(platform_id)
+    item = {
+        "id": str(platform_id),          # campo id obrigatório
+        "platform_id": str(platform_id), # chave de partição
+        "platform_name": platform
+    }
     try:
-        platform_container.upsert_item({"platform_id": str(platform_id), "platform_name": platform})
+        platform_container.upsert_item(item)
     except exceptions.CosmosHttpResponseError as e:
-        print(f'Erro ao inserir plataforma {platform}: {e.message}')
+        print(f'Erro ao inserir plataforma {platform} (ID: {platform_id}): {e.message}')
+
+
 
 # Atualização do DataFrame com IDs normalizados
 df['country_id'] = df['country'].map(country_map)
